@@ -1,5 +1,6 @@
 # MCU-Based-on-Verilog
 This project will implement MCU based on verilog language.
+The MCU will use RISC-V instruction set.
 It aims to achieve Cortex-R5 performance on some aspects, such as Dhrystone, CoreMark, and other specific floating-point benchmark.
 The MCU will have the following features:
 1. Support RV32I base instruction set.
