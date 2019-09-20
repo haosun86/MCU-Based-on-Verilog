@@ -84,22 +84,9 @@ always @ (*) begin
 end
 
 
-reg instr_rd_r0_vld;
-always @ (*) begin
-    casez(instr_op) 
-	default:
-    	    instr_rd_r0_vld = 1'b0;
-    endcase
-end
-
-reg[4:0] instr_rd_r0_addr;
-always @ (*) begin
-    casez(instr_op) 
-        default:
-    	    instr_rd_r0_addr = instr_op[19:15];
-    endcase
-end
-
+assign  instr_rd_r0_vld = 1'b0;
+assign  instr_rd_r0_addr = instr_is_compressed ? ((instr_op[1:0] == 2'b10) ? 5'h2: instr_op[9;7]) :
+                                            	instr_op[19:15];
 
 reg instr_rd_r1_vld;
 always @ (*) begin
