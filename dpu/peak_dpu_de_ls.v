@@ -27,6 +27,9 @@ instr_wr_addr,
 instr_imm,
 instr_use_imm,
 
+instr_is_ld,
+instr_is_ls,
+
 instr_ls_op
 
 );
@@ -60,6 +63,9 @@ output[4:0]  instr_wr_addr;
 output[31:0] instr_imm;
 output       instr_use_imm;
 
+output       instr_is_ld;
+output       instr_is_ls;
+
 output[2:0]  instr_ls_op;
 
 
@@ -83,6 +89,40 @@ always @ (*) begin
 	endcase
 end
 
+reg instr_is_ld;
+always @ (*) begin
+	casez(instr_op[15:0])
+	    16'b?000_????_?000_0011: instr_is_ld = 1'b1;  //lb
+	    16'b?001_????_?000_0011: instr_ls_ld = 1'b1;  //lh
+	    16'b?010_????_?000_0011: instr_ls_ld = 1'b1;  //lw
+	    16'b?100_????_?000_0011: instr_ls_ld = 1'b1; //lbu
+	    16'b?101_????_?000_0011: instr_ls_ld = 1'b1; //lhu
+	    16'b010?_????_????_??00: instr_ls_ld = 1'b1;  //c.lw
+	    16'b010?_????_????_??10: instr_ls_ld = 1'b1;  //c.lwsp
+	default:
+		instr_is_ld = 1'b0;
+	endcase
+end
+
+reg instr_is_ls;
+always @ (*) begin
+	casez(instr_op[15:0])
+	    16'b?000_????_?000_0011: instr_is_ls = 1'b1;  //lb
+	    16'b?001_????_?000_0011: instr_is_ls = 1'b1;  //lh
+	    16'b?010_????_?000_0011: instr_ls_ls = 1'b1;  //lw
+	    16'b?100_????_?000_0011: instr_ls_ls = 1'b1; //lbu
+	    16'b?101_????_?000_0011: instr_ls_ls = 1'b1; //lhu
+	    16'b?000_????_?010_0011: instr_ls_ls = 1'b1;  //sb
+	    16'b?001_????_?010_0011: instr_ls_ls = 1'b1;  //sh
+	    16'b?010_????_?010_0011: instr_ls_ls = 1'b1;  //sw
+	    16'b010?_????_????_??00: instr_ls_ls = 1'b1;  //c.lw
+	    16'b110?_????_????_??00: instr_ls_ls = 1'b1;  //c.sw
+	    16'b010?_????_????_??10: instr_ls_ls = 1'b1;  //c.lwsp
+	    16'b110?_????_????_??10: instr_ls_ls = 1'b1;  //c.swsp
+	default:
+		instr_is_ls = 1'b1;
+	endcase
+end
 
 assign  instr_rd_r1_vld = 1'b1;
 assign  instr_rd_r0_addr = instr_is_compressed ? ((instr_op[1:0] == 2'b10) ? 5'h2: instr_op[9;7]) :

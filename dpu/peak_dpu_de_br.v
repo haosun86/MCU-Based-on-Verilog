@@ -27,6 +27,9 @@ instr_wr_addr,
 instr_imm,
 instr_use_imm,
 
+instr_is_jal,
+instr_is_br,
+
 instr_br_op
 
 );
@@ -60,6 +63,9 @@ output[4:0]  instr_wr_addr;
 output[31:0] instr_imm;
 output       instr_use_imm;
 
+output       instr_is_jal;
+output       instr_is_br;
+
 output[2:0]  instr_br_op;
 
 
@@ -85,6 +91,41 @@ always @ (*) begin
 	endcase
 end
 
+reg instr_is_jal;
+always @ (*) begin
+	casez(instr_op[15:0])
+	16'b????_????_?110_1111: instr_is_jal = 1'b1;  //jal
+	16'b????_????_?110_0111: instr_is_jal = 1'b1; //jalr
+	16'b001?_????_????_??01: instr_is_jal = 1'b1;  //c.jal
+	16'b101?_????_????_??01: instr_is_jal = 1'b1;  //c.j
+	16'b1000_????_?000_0010: instr_is_jal = 1'b1; //c.jr
+	16'b1001_????_?000_0010: instr_is_jal = 1'b1; //c.jalr
+	default:
+		instr_is_jal = 1'b1;
+	endcase
+end
+
+reg instr_is_br;
+always @ (*) begin
+	casez(instr_op[15:0])
+	16'b????_????_?110_1111: instr_is_br = 1'b1;  //jal
+	16'b????_????_?110_0111: instr_is_br = 1'b1; //jalr
+	16'b?000_????_?110_0011: instr_is_br = 1'b1;  //beq
+	16'b?001_????_?110_0011: instr_is_br = 1'b1;  //bne
+	16'b?100_????_?110_0011: instr_is_br = 1'b1;  //blt
+	16'b?101_????_?110_0011: instr_is_br = 1'b1;  //bge
+	16'b?110_????_?110_0011: instr_is_br = 1'b1; //bltu
+	16'b?111_????_?110_0011: instr_is_br = 1'b1; //bgeu
+	16'b001?_????_????_??01: instr_is_br = 1'b1;  //c.jal
+	16'b101?_????_????_??01: instr_is_br = 1'b1;  //c.j
+	16'b110?_????_????_??01: instr_is_br = 1'b1;  //c.beqz
+	16'b111?_????_????_??01: instr_is_br = 1'b1;  //c.bnez
+	16'b1000_????_?000_0010: instr_is_br = 1'b1; //c.jr
+	16'b1001_????_?000_0010: instr_is_br = 1'b1; //c.jalr
+	default:
+		instr_is_br = 1'b1;
+	endcase
+end
 
 reg instr_rd_r0_vld;
 always @ (*) begin
