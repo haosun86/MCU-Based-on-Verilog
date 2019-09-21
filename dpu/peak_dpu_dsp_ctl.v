@@ -59,6 +59,7 @@ input[4:0]   alu0_wr_addr_ex;
 input        alu1_wr_vld_ex;
 input[4:0]   alu1_wr_addr_ex;
 input        mul_wr_vld_ex;
+input        mul_busy;
 input[4:0]   mul_wr_addr_ex;
 input        div_wr_vld_ex;
 input        div_busy;
@@ -88,13 +89,44 @@ input[4:0]   lsu_wr_addr_ret;
 //If instr0 is alu, and instr1 is mul. we can switch the
 //two places, and notify which one is older
 //This case will be similar with branch and div
-wire instr1_cannot_iss = instr0_vld & instr1_vld &
-	                 ((instr0_is_mul & instr1_is_mul) ||
-		          (instr0_is_div & instr1_is_div) ||
-		          (instr0_is_ls  & instr1_is_ls)  ||
-			  (instr0_is_br  & instr1_is_br)  ||
-			  (instr0_is_csr & instr1_is_csr) ||
-			  (instr0_is_fp  & instr1_is_fp)  ||
+wire instr1_cannot_iss_struct = instr0_vld & instr1_vld &
+	                        ((instr0_is_mul & instr1_is_mul) ||
+		                 (instr0_is_div & instr1_is_div) ||
+		                 (instr0_is_ls  & instr1_is_ls)  ||
+			         (instr0_is_br  & instr1_is_br)  ||
+			         (instr0_is_csr & instr1_is_csr) ||
+			         (instr0_is_fp  & instr1_is_fp)  );
+
+////////////////////////
+//DEAL WITH CASE B
+///////////////////////
+//1. data dependency between instr0 and instr1
+//2. data dependency between instr{n} and div/mul ex busy instructions
+//3. data dependency between instr{n} and ld ex stage
+//4. data dependency between instr{n} and fp
+wire instr0_cannot_iss_data_dep = instr0_vld &
+	                          ((instr0_rd_r0_vld & (instr0_rd_r0_addr == mul_wr_addr_ex) & ~mul_wr_vld_ex & mul_busy) ||
+			           (instr0_rd_r1_vld & (instr0_rd_r1_addr == mul_wr_addr_ex) & ~mul_wr_vld_ex & mul_busy) ||
+	                           (instr0_rd_r0_vld & (instr0_rd_r0_addr == div_wr_addr_ex) & ~div_wr_vld_ex & div_busy) ||
+			           (instr0_rd_r1_vld & (instr0_rd_r1_addr == div_wr_addr_ex) & ~div_wr_vld_ex & div_busy) ||
+	                           (instr0_rd_r0_vld & (instr0_rd_r0_addr == lsu_wr_addr_ex) & lsu_wr_vld_ex) ||
+	                           (instr0_rd_r1_vld & (instr0_rd_r1_addr == lsu_wr_addr_ex) & lsu_wr_vld_ex) 
+			           //TODO: Will add FP related logic when complete fp
+			           //plan
+		                   );
+
+wire instr1_cannot_iss_data_dep = instr1_vld &
+	                          ((instr1_rd_r0_vld & (instr1_rd_r0_addr == mul_wr_addr_ex) & ~mul_wr_vld_ex & mul_busy) ||
+			           (instr1_rd_r1_vld & (instr1_rd_r1_addr == mul_wr_addr_ex) & ~mul_wr_vld_ex & mul_busy) ||
+	                           (instr1_rd_r0_vld & (instr1_rd_r0_addr == div_wr_addr_ex) & ~div_wr_vld_ex & div_busy) ||
+			           (instr1_rd_r1_vld & (instr1_rd_r1_addr == div_wr_addr_ex) & ~div_wr_vld_ex & div_busy) ||
+	                           (instr1_rd_r0_vld & (instr1_rd_r0_addr == lsu_wr_addr_ex) & lsu_wr_vld_ex) ||
+	                           (instr1_rd_r1_vld & (instr1_rd_r1_addr == lsu_wr_addr_ex) & lsu_wr_vld_ex) ||
+				   (instr0_vld & instr0_wr_vld & instr1_rd_r0_vld & (instr1_rd_r0_addr == instr0_wr_addr)) ||
+				   (instr0_vld & instr0_wr_vld & instr1_rd_r1_vld & (instr1_rd_r1_addr == instr0_wr_addr)) 
+			           //TODO: Will add FP related logic when complete fp
+			           //plan
+		                   );
 
 
 
