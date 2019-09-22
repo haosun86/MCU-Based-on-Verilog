@@ -68,6 +68,11 @@ input        lsu_wr_vld_ex;
 input[4:0]   lsu_wr_addr_ex;
 input        lsu_wr_vld_ret;
 input[4:0]   lsu_wr_addr_ret;
+input        csr_wr_vld_ex;
+input[4:0]   csr_wr_addr_ex;
+input        fp_wr_vld;
+input        fp_busy;
+input[4:0]   fp_wr_addr;
 
 
 //The hazards cases I can think out (including but not limited):
@@ -89,16 +94,16 @@ input[4:0]   lsu_wr_addr_ret;
 //If instr0 is alu, and instr1 is mul. we can switch the
 //two places, and notify which one is older
 //This case will be similar with branch and div
-wire instr1_cannot_iss_struct = instr0_vld & instr1_vld &
-	                        ((instr0_is_mul & instr1_is_mul) ||
-		                 (instr0_is_div & instr1_is_div) ||
-		                 (instr0_is_ls  & instr1_is_ls)  ||
-			         (instr0_is_br  & instr1_is_br)  ||
-			         (instr0_is_csr & instr1_is_csr) ||
-			         (instr0_is_fp  & instr1_is_fp)  );
+wire instr1_cannot_iss_inter_struct_dep = instr0_vld & instr1_vld &
+	                                 ((instr0_is_mul & instr1_is_mul) ||
+		                          (instr0_is_div & instr1_is_div) ||
+		                          (instr0_is_ls  & instr1_is_ls)  ||
+			                  (instr0_is_br  & instr1_is_br)  ||
+			                  (instr0_is_csr & instr1_is_csr) ||
+			                  (instr0_is_fp  & instr1_is_fp)  );
 
 ////////////////////////
-//DEAL WITH CASE B
+//DEAL WITH CASE B/E
 ///////////////////////
 //1. data dependency between instr0 and instr1
 //2. data dependency between instr{n} and div/mul ex busy instructions
@@ -128,6 +133,32 @@ wire instr1_cannot_iss_data_dep = instr1_vld &
 			           //plan
 		                   );
 
+
+////////////////////////
+//DEAL WITH CASE C
+///////////////////////
+wire instr1_cannot_iss_ctl_dep = instr0_vld & instr0_is_br;
+
+
+////////////////////////
+//DEAL WITH CASE D
+///////////////////////
+wire instr0_cannot_iss_seq_struct_dep = instr0_vld &
+	                                ((mul_busy & instr0_is_mul)     ||
+					 (div_busy & instr0_is_div)     ||
+					 (lsu_wr_vld_ex & instr0_is_ls) 
+					 //TODO: will add FP related logic
+					 //when complete FP plan
+					 );
+
+wire instr1_cannot_iss_seq_struct_dep = instr1_vld &
+	                                ((mul_busy & instr1_is_mul)     ||
+					 (div_busy & instr1_is_div)     ||
+					 (lsu_wr_vld_ex & instr1_is_ls) 
+					 //TODO: will add FP related logic
+					 //when complete FP plan
+					 );
+					 
 
 
 endmodule
