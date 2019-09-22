@@ -160,5 +160,29 @@ wire instr1_cannot_iss_seq_struct_dep = instr1_vld &
 					 );
 					 
 
+wire instr0_cannot_iss = instr0_cannot_iss_data_dep         ||
+			 instr0_cannot_iss_seq_struct_dep   ;
+
+wire instr1_cannot_iss = instr1_cannot_iss_inter_struct_dep ||
+	                 instr1_cannot_iss_data_dep         ||
+                         instr1_cannot_iss_ctl_dep          ||
+			 instr1_cannot_iss_seq_struct_dep   ;
+
+//[0]: regbank
+//[1]: alu0
+//[2]: alu1
+//[3]: mul
+//[4]: div
+//[5]: ld
+//[6]: csr
+//[7]: fp
+wire[7:0] instr0_r0_fwd_sel;
+
+assign instr0_fwd_sel[1] = instr0_vld &
+			   (instr0_rd_r0_vld & (instr0_rd_r0_addr == alu0_wr_addr_ex) & alu0_wr_vld_ex);
+assign instr0_fwd_sel[2] = instr0_vld &
+			   (instr0_rd_r0_vld & (instr0_rd_r0_addr == alu1_wr_addr_ex) & alu1_wr_vld_ex);
+assign instr0_fwd_sel[3] = instr0_vld &
+			   (instr0_rd_r0_vld & (instr0_rd_r0_addr == mul_wr_addr_ex) & mul_wr_vld_ex & ~mul_busy);
 
 endmodule
