@@ -23,11 +23,11 @@ dpu_ifu_new_pc_req,
 dpu_ifu_new_pc,
 dpu_ifu_stop_fetch,
 ifu_dpu_imem_txns_pending,
-dpu2ifu_rdy,
-ifu2dpu_instr,
-ifu2dpu_imem_err,
-ifu2dpu_err_rvi_hi,
-ifu2dpu_vd
+dpu_ifu_rdy,
+ifu_dpu_instr,
+ifu_dpu_imem_err,
+ifu_dpu_err_rvi_hi,
+ifu_dpu_instr_vld
 );
 
 // Control signals
@@ -45,11 +45,11 @@ input[31:0]   dpu_ifu_new_pc;
 input         dpu_ifu_stop_fetch;// Stop IFU
 output        ifu_dpu_imem_txns_pending;  // There are pending imem transactions
 // Instruction decode unit interface
-input         dpu2ifu_rdy;// IDU ready for new data
-output[31:0]  ifu2dpu_instr;// IFU instruction
-output        ifu2dpu_imem_err; // Instruction access fault exception
-output        ifu2dpu_err_rvi_hi;// 1 - imem fault when trying to fetch second half of an unaligned RVI instruction
-output[1:0]   ifu2dpu_vd;// IFU request
+input         dpu_ifu_rdy;// IDU ready for new data
+output[31:0]  ifu_dpu_instr;// IFU instruction
+output        ifu_dpu_imem_err; // Instruction access fault exception
+output        ifu_dpu_err_rvi_hi;// 1 - imem fault when trying to fetch second half of an unaligned RVI instruction
+output[1:0]   ifu_dpu_instr_vld;// IFU request
 
 //-------------------------------------------------------------------------------
 // Local parameters declaration
@@ -164,7 +164,7 @@ assign q_err_next       = q_err  [PEAK_IFU_QUEUE_ADR_W'(q_rptr + 1'b1)];
 always @ (*) begin
     q_re = PEAK_RE_NONE;
 
-    if (~q_empty & ifu2dpu_vd & dpu2ifu_rdy) begin
+    if (~q_empty & ifu_dpu_instr_vld & dpu_ifu_rdy) begin
         if (q_head_rvc | q_err_head) begin
             q_re = PEAK_RE_HALFWORD;
         end else begin
@@ -453,27 +453,27 @@ end
 // Instruction decode unit interface
 //-------------------------------------------------------------------------------
 
-reg       ifu2dpu_imem_err;
-reg       ifu2dpu_err_rvi_hi;
-reg[1:0]  ifu2dpu_vd;
+reg       ifu_dpu_imem_err;
+reg       ifu_dpu_err_rvi_hi;
+reg[1:0]  ifu_dpu_instr_vld;
 
 always @ (*) begin
-    ifu2dpu_vd          = 1'b0;
-    ifu2dpu_imem_err    = 1'b0;
-    ifu2dpu_err_rvi_hi  = 1'b0;
+    ifu_dpu_instr_vld          = 1'b0;
+    ifu_dpu_imem_err    = 1'b0;
+    ifu_dpu_err_rvi_hi  = 1'b0;
     if (~q_empty) begin
         if (q_ocpd_h == 2'h1) begin
-            ifu2dpu_vd[1:0]     = {1'b0, q_head_rvc | q_err_head};
-            ifu2dpu_imem_err    = q_err_head;
+            ifu_dpu_instr_vld[1:0]     = {1'b0, q_head_rvc | q_err_head};
+            ifu_dpu_imem_err    = q_err_head;
         end else begin          
-            ifu2dpu_vd          = {q_head_rvc & q_snd_rvc, 1'b1};
-            ifu2dpu_imem_err    = q_err_head ? 1'b1 : (q_head_rvi & q_err_next);
-            ifu2dpu_err_rvi_hi  = ~q_err_head & q_head_rvi & q_err_next;
+            ifu_dpu_instr_vld          = {q_head_rvc & q_snd_rvc, 1'b1};
+            ifu_dpu_imem_err    = q_err_head ? 1'b1 : (q_head_rvi & q_err_next);
+            ifu_dpu_err_rvi_hi  = ~q_err_head & q_head_rvi & q_err_next;
         end
     end 
 end
 
-assign  ifu2dpu_instr = q_head_rvc & ~q_snd_rvc  ? {16'h0, q_data_head}: 
+assign  ifu_dpu_instr = q_head_rvc & ~q_snd_rvc  ? {16'h0, q_data_head}: 
                                                    {q_data_next, q_data_head};
 
 
