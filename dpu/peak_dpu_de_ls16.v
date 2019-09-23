@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////
 // File Description: This file is main decoder
-// It can decode compressed and non-compressed
+// It can decode compressed 
 // instructions
 // In this file, it can decode ld/st instructions 
 // Date:   2019.09.18
