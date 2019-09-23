@@ -46,7 +46,7 @@ localparam   SW  = 3'h7;
 
 input        instr_is_compressed;
 input        instr_vld;
-input[31:0]  instr_op;
+input[15:0]  instr_op;
 
 output       instr_rd_r0_vld;
 output[4:0]  instr_rd_r0_addr;
@@ -72,14 +72,6 @@ output[2:0]  instr_ls_op;
 reg[2:0] instr_ls_op;
 always @ (*) begin
 	casez(instr_op[15:0])
-	    16'b?000_????_?000_0011: instr_ls_op = LB;  //lb
-	    16'b?001_????_?000_0011: instr_ls_op = LH;  //lh
-	    16'b?010_????_?000_0011: instr_ls_op = LW;  //lw
-	    16'b?100_????_?000_0011: instr_ls_op = LBU; //lbu
-	    16'b?101_????_?000_0011: instr_ls_op = LHU; //lhu
-	    16'b?000_????_?010_0011: instr_ls_op = SB;  //sb
-	    16'b?001_????_?010_0011: instr_ls_op = SH;  //sh
-	    16'b?010_????_?010_0011: instr_ls_op = SW;  //sw
 	    16'b010?_????_????_??00: instr_ls_op = LW;  //c.lw
 	    16'b110?_????_????_??00: instr_ls_op = SW;  //c.sw
 	    16'b010?_????_????_??10: instr_ls_op = LW;  //c.lwsp
@@ -92,11 +84,6 @@ end
 reg instr_is_ld;
 always @ (*) begin
 	casez(instr_op[15:0])
-	    16'b?000_????_?000_0011: instr_is_ld = 1'b1;  //lb
-	    16'b?001_????_?000_0011: instr_ls_ld = 1'b1;  //lh
-	    16'b?010_????_?000_0011: instr_ls_ld = 1'b1;  //lw
-	    16'b?100_????_?000_0011: instr_ls_ld = 1'b1; //lbu
-	    16'b?101_????_?000_0011: instr_ls_ld = 1'b1; //lhu
 	    16'b010?_????_????_??00: instr_ls_ld = 1'b1;  //c.lw
 	    16'b010?_????_????_??10: instr_ls_ld = 1'b1;  //c.lwsp
 	default:
@@ -107,14 +94,6 @@ end
 reg instr_is_ls;
 always @ (*) begin
 	casez(instr_op[15:0])
-	    16'b?000_????_?000_0011: instr_is_ls = 1'b1;  //lb
-	    16'b?001_????_?000_0011: instr_is_ls = 1'b1;  //lh
-	    16'b?010_????_?000_0011: instr_ls_ls = 1'b1;  //lw
-	    16'b?100_????_?000_0011: instr_ls_ls = 1'b1; //lbu
-	    16'b?101_????_?000_0011: instr_ls_ls = 1'b1; //lhu
-	    16'b?000_????_?010_0011: instr_ls_ls = 1'b1;  //sb
-	    16'b?001_????_?010_0011: instr_ls_ls = 1'b1;  //sh
-	    16'b?010_????_?010_0011: instr_ls_ls = 1'b1;  //sw
 	    16'b010?_????_????_??00: instr_ls_ls = 1'b1;  //c.lw
 	    16'b110?_????_????_??00: instr_ls_ls = 1'b1;  //c.sw
 	    16'b010?_????_????_??10: instr_ls_ls = 1'b1;  //c.lwsp
@@ -125,15 +104,12 @@ always @ (*) begin
 end
 
 assign  instr_rd_r1_vld = 1'b1;
-assign  instr_rd_r0_addr = instr_is_compressed ? ((instr_op[1:0] == 2'b10) ? 5'h2: instr_op[9;7]) :
-                                            	  instr_op[19:15];
+assign  instr_rd_r0_addr =  ((instr_op[1:0] == 2'b10) ? 5'h2: instr_op[9;7]) ;
+                                            	  
 
 reg instr_rd_r1_vld;
 always @ (*) begin
     casez(instr_op[15:0]) 
-	    16'b?000_????_?010_0011: instr_rd_r1_vld = 1'b1;  //sb
-	    16'b?001_????_?010_0011: instr_rd_r1_vld = 1'b1;  //sh
-	    16'b?010_????_?010_0011: instr_rd_r1_vld = 1'b1;  //sw
 	    16'b110?_????_????_??00: instr_rd_r1_vld = 1'b1;  //c.sw
 	    16'b110?_????_????_??10: instr_rd_r1_vld = 1'b1;  //c.swsp
         default:
@@ -141,8 +117,7 @@ always @ (*) begin
     endcase
 end
 
-reg[4:0] instr_rd_r1_addr = instr_is_compressed ? ((instr_op[1:0] == 2'b10) ? instr_op[6:2] : instr_op[4:2]) :
-	                                          instr_op[24:20];
+reg[4:0] instr_rd_r1_addr = ((instr_op[1:0] == 2'b10) ? instr_op[6:2] : instr_op[4:2]) ;
 
 //currently we just support standard extension
 //so no need to 3rd source
@@ -166,15 +141,12 @@ assign instr_use_imm = 1'b1;
 reg[31:0] instr_imm;
 always @ (*) begin
     casez(instr_op)
-	    16'b?000_????_?010_0011: instr_imm = {{20{instr_op[31]}}, instr_op[31:25], instr_op[11:7]};  //sb
-	    16'b?001_????_?010_0011: instr_imm = {{20{instr_op[31]}}, instr_op[31:25], instr_op[11:7];  //sh
-	    16'b?010_????_?010_0011: instr_imm = {{20{instr_op[31]}}, instr_op[31:25], instr_op[11:7];  //sw
 	    16'b010?_????_????_??00: instr_imm = {{27{1'b0}}, instr_op[5], instr_op[12:10], instr_op[6], 2'h0};  //c.lw
 	    16'b110?_????_????_??00: instr_imm = {{27{1'b0}}, instr_op[5], instr_op[12:10], instr_op[6], 2'h0;  //c.sw
 	    16'b010?_????_????_??10: instr_imm = {{24{1'b0}, instr_op[3:2], instr_op[12], instr_op[6:4], 2'h0}};  //c.lwsp
 	    16'b110?_????_????_??10: instr_imm = {{24{1'b0}, instr_op[8:7], instr_op[12:9], 2'h0};  //c.swsp
         default:
-    	    instr_imm = {{20{instr_op[31]}}, instr_op[31:20];
+    	    instr_imm = 32'h0;
     endcase
 end
 
