@@ -11,8 +11,72 @@
 // Date:   2019.09.18
 ///////////////////////////////////////////////////////////
 
-module peak_dpu_dsp_ctl
-(
+module peak_dpu_dsp_ctl(
+instr0_vld,
+instr0_rd_r0_vld,
+instr0_rd_r0_addr,
+instr0_rd_r1_vld,
+instr0_rd_r1_addr,
+instr0_rd_r2_vld,
+instr0_rd_r2_addr,
+instr0_wr_vld,
+instr0_wr_addr,
+instr0_is_alu,
+instr0_is_mul,
+instr0_is_div,
+instr0_is_ld,
+instr0_is_jal,
+instr0_is_ls,
+instr0_is_br,
+instr0_is_csr,
+instr0_is_fp,
+instr1_vld,
+instr1_rd_r0_vld,
+instr1_rd_r0_addr,
+instr1_rd_r1_vld,
+instr1_rd_r1_addr,
+instr1_rd_r2_vld,
+instr1_rd_r2_addr,
+instr1_wr_vld,
+instr1_wr_addr,
+instr1_is_alu,
+instr1_is_mul,
+instr1_is_div,
+instr1_is_ld,
+instr1_is_jal,
+instr1_is_ls,
+instr1_is_br,
+instr1_is_csr,
+instr1_is_fp,
+alu0_wr_vld_ex,
+alu0_wr_addr_ex,
+alu1_wr_vld_ex,
+alu1_wr_addr_ex,
+mul_wr_vld_ex,
+mul_busy,
+mul_wr_addr_ex,
+div_wr_vld_ex,
+div_busy,
+div_wr_addr_ex,
+lsu_wr_vld_ex,
+lsu_wr_addr_ex,
+lsu_wr_vld_ret,
+lsu_wr_addr_ret,
+csr_wr_vld_ex,
+csr_wr_addr_ex,
+fp_wr_vld,
+fp_busy,
+fp_wr_addr,
+instr0_cannot_iss,
+instr1_cannot_iss,
+instr0_r0_fwd_sel,
+instr0_r1_fwd_sel,
+instr0_r2_fwd_sel,
+instr1_r0_fwd_sel,
+instr1_r1_fwd_sel,
+instr1_r2_fwd_sel,
+instr0_need_rd_eq0,
+instr1_need_rd_eq0,
 
 );
 
@@ -79,8 +143,12 @@ output      instr0_cannot_iss;
 output      instr1_cannot_iss;
 output[6:0] instr0_r0_fwd_sel;
 output[6:0] instr0_r1_fwd_sel;
+output[6:0] instr0_r2_fwd_sel;
 output[6:0] instr1_r0_fwd_sel;
 output[6:0] instr1_r1_fwd_sel;
+output[6:0] instr1_r2_fwd_sel;
+output      instr0_need_rd_eq0;
+output      instr1_need_rd_eq0;
 
 //The hazards cases I can think out (including but not limited):
 //a. inter instructions with structure hazards
@@ -101,13 +169,31 @@ output[6:0] instr1_r1_fwd_sel;
 //If instr0 is alu, and instr1 is mul. we can switch the
 //two places, and notify which one is older
 //This case will be similar with branch and div
+wire instr0_need_rd_eq0 = ~instr0_rd_r0_vld & ~instr0_rd_r1_vld & ~instr0_rd_r2_vld; 
+wire instr0_need_rd_eq1 = instr0_rd_r0_vld;
+
+wire instr0_need_rd_eq2 = instr0_rd_r0_vld  & instr0_rd_r1_vld;
+
+wire instr0_need_rd_eq3 = instr0_rd_r0_vld & instr0_rd_r1_vld & instr0_rd_r2_vld; 
+
+wire instr1_need_rd_eq0 = ~instr1_rd_r0_vld & ~instr1_rd_r1_vld & ~instr1_rd_r2_vld; 
+wire instr1_need_rd_eq1 = instr1_rd_r0_vld;
+
+wire instr1_need_rd_eq2 = instr1_rd_r0_vld  & instr1_rd_r1_vld;
+
+wire instr1_need_rd_eq3 = instr1_rd_r0_vld & instr1_rd_r1_vld & instr1_rd_r2_vld; 
+
+     
 wire instr1_cannot_iss_inter_struct_dep = instr0_vld & instr1_vld &
 	                                 ((instr0_is_mul & instr1_is_mul) ||
 		                          (instr0_is_div & instr1_is_div) ||
 		                          (instr0_is_ls  & instr1_is_ls)  ||
 			                  (instr0_is_br  & instr1_is_br)  ||
 			                  (instr0_is_csr & instr1_is_csr) ||
-			                  (instr0_is_fp  & instr1_is_fp)  );
+			                  (instr0_is_fp  & instr1_is_fp)  ||
+					  (instr0_need_rd_eq1 & instr1_need_rd_eq3) ||
+					  (instr0_need_rd_eq2 & (instr1_need_rd_eq2 | instr1_need_rd_eq3)) ||
+					  (instr0_need_rd_eq3 )) ;
 
 ////////////////////////
 //DEAL WITH CASE B/E
@@ -176,6 +262,7 @@ wire instr1_cannot_iss = instr0_cannot_iss                  ||
                          instr1_cannot_iss_ctl_dep          ||
 			 instr1_cannot_iss_seq_struct_dep   ;
 
+
 //[0]: alu0
 //[1]: alu1
 //[2]: mul
@@ -217,6 +304,23 @@ assign instr0_r1_fwd_sel[5] = instr0_vld &
 assign instr0_r1_fwd_sel[6] = instr0_vld &
 			      (instr0_rd_r1_vld & (instr0_rd_r1_addr == fp_wr_addr) & fp_wr_vld);
 
+wire[6:0] instr0_r2_fwd_sel;
+
+assign instr0_r2_fwd_sel[0] = instr0_vld &
+		    	      (instr0_rd_r2_vld & (instr0_rd_r2_addr == alu0_wr_addr_ex) & alu0_wr_vld_ex);
+assign instr0_r2_fwd_sel[1] = instr0_vld &
+			      (instr0_rd_r2_vld & (instr0_rd_r2_addr == alu1_wr_addr_ex) & alu1_wr_vld_ex);
+assign instr0_r2_fwd_sel[2] = instr0_vld &
+			      (instr0_rd_r2_vld & (instr0_rd_r2_addr == mul_wr_addr_ex) & mul_wr_vld_ex & ~mul_busy);
+assign instr0_r2_fwd_sel[3] = instr0_vld &
+			      (instr0_rd_r2_vld & (instr0_rd_r2_addr == div_wr_addr_ex) & div_wr_vld_ex & ~div_busy);
+assign instr0_r2_fwd_sel[4] = instr0_vld &
+			      (instr0_rd_r2_vld & (instr0_rd_r2_addr == ls_wr_addr_ret) & ls_wr_vld_ret);
+assign instr0_r2_fwd_sel[5] = instr0_vld &
+			      (instr0_rd_r2_vld & (instr0_rd_r2_addr == csr_wr_addr_ex) & csr_wr_vld_ex);
+assign instr0_r2_fwd_sel[6] = instr0_vld &
+			      (instr0_rd_r2_vld & (instr0_rd_r2_addr == fp_wr_addr) & fp_wr_vld);
+
 
 wire[6:0] instr1_r0_fwd_sel;
 
@@ -251,5 +355,22 @@ assign instr1_r1_fwd_sel[5] = instr1_vld &
 			      (instr1_rd_r1_vld & (instr1_rd_r1_addr == csr_wr_addr_ex) & csr_wr_vld_ex);
 assign instr1_r1_fwd_sel[6] = instr1_vld &
 			      (instr1_rd_r1_vld & (instr1_rd_r1_addr == fp_wr_addr) & fp_wr_vld);
+
+wire[6:0] instr2_r2_fwd_sel;
+
+assign instr2_r2_fwd_sel[0] = instr2_vld &
+		    	      (instr2_rd_r2_vld & (instr2_rd_r2_addr == alu0_wr_addr_ex) & alu0_wr_vld_ex);
+assign instr2_r2_fwd_sel[1] = instr2_vld &
+			      (instr2_rd_r2_vld & (instr2_rd_r2_addr == alu1_wr_addr_ex) & alu1_wr_vld_ex);
+assign instr2_r2_fwd_sel[2] = instr2_vld &
+			      (instr2_rd_r2_vld & (instr2_rd_r2_addr == mul_wr_addr_ex) & mul_wr_vld_ex & ~mul_busy);
+assign instr2_r2_fwd_sel[3] = instr2_vld &
+			      (instr2_rd_r2_vld & (instr2_rd_r2_addr == div_wr_addr_ex) & div_wr_vld_ex & ~div_busy);
+assign instr2_r2_fwd_sel[4] = instr2_vld &
+			      (instr2_rd_r2_vld & (instr2_rd_r2_addr == ls_wr_addr_ret) & ls_wr_vld_ret);
+assign instr2_r2_fwd_sel[5] = instr2_vld &
+			      (instr2_rd_r2_vld & (instr2_rd_r2_addr == csr_wr_addr_ex) & csr_wr_vld_ex);
+assign instr2_r2_fwd_sel[6] = instr2_vld &
+			      (instr2_rd_r2_vld & (instr2_rd_r2_addr == fp_wr_addr) & fp_wr_vld);
 
 endmodule
