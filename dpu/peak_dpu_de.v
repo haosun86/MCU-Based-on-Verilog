@@ -16,7 +16,20 @@ input        rst_n;
 
 input[1:0]   ifu_dpu_instr_vld;
 input[31:0]  ifu_dpu_instr;
-output       dpu_ify_rdy;
+output       dpu_ifu_rdy;
+
+//from current RV standard instruction set,
+//compressed instruction always has 1 source
+//non-compressed instruction always has 2 source
+//so for current design, 2 read ports are enough
+//we can just have extra ports dangling for further
+//development if we want to have customed isa, such
+//as madd
+output[4:0]  regbank_rd_addr0;
+output[4:0]  regbank_rd_addr1;
+output[4:0]  regbank_rd_addr2;
+input[31:0]  regbank_rdata0;
+input[31:0]  regbank_rdata1;
 
 
 //forwarding bus
@@ -78,6 +91,8 @@ output[3:0]  instr1_alu_op;
 output[1:0]  instr1_mul_op;
 output[1:0]  instr1_div_op;
 output[2:0]  instr1_br_op;
+
+
 
 
 endmodule
